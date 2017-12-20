@@ -15,7 +15,7 @@ class IP(base):
     protocol = Column(Integer, default=0)
 
     def __repr__(self):
-        return "< ip:%s port:%s types: %d : protocol: %d" % \
+        return "< ip:%s port:%s types: %d : protocol: %d >" % \
                (self.ip, self.port, self.types, self.protocol)
 
 sqlite_URI = os.path.join(IPDATA_DIR, "ip.db")
