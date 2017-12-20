@@ -48,27 +48,9 @@ def XpathPraser(response, parser):
             type = 0
             protocol = 0
 
-            # country = text_('')
-            # area = text_('')
-            # if text_('省') in addr or self.AuthCountry(addr):
-            #     country = text_('国内')
-            #     area = addr
-            # else:
-            #     country = text_('国外')
-            #     area = addr
         except Exception as e:
             continue
-        # updatetime = datetime.datetime.now()
-        # ip，端口，类型(0高匿名，1透明)，protocol(0 http,1 https http),country(国家),area(省市),updatetime(更新时间)
 
-        # proxy ={'ip':ip,'port':int(port),'type':int(type),'protocol':int(protocol),'country':country,'area':area,'updatetime':updatetime,'speed':100}
-        # proxy = {'ip': ip, 'port': int(port), 'types': int(type), 'protocol': int(protocol), 'country': country,
-        #          'area': area, 'speed': 100}
-        # spawns.append(gevent.joinall(check_and_store_ValidIP(ip, port, type, protocol)))
-        # if len(spawns) >= MAX_DOWNLOAD_CONCURRENT:
-        #     gevent.joinall(spawns)
-        #     spawns = []
-        # gevent.joinall(spawns)
         check_and_store_ValidIP(ip, port, type, protocol)
 
 
@@ -98,8 +80,15 @@ def download(url):
 
     except Exception:
         count = 0  # 重试次数
-        # proxylist = sqlhelper.select(10)
-        proxylist = session.query(IP).all()[1:20]
+
+        start = random.choice([num for num in range(1, 100)])
+        allIPS = session.query(IP).count()
+        start_index = start * allIPS / 100
+        end_index = start_index + 30
+        if end_index > allIPS:
+            end_index = allIPS
+
+        proxylist = session.query(IP).all()[start_index:end_index]
 
         if not proxylist:
             return None
@@ -118,27 +107,30 @@ def download(url):
                 else:
                     return r.text
             except Exception:
-                count += 1
+                g_count += 1
 
+import threading as td
+
+def threadTask(parser, url):
+    html_text = download(url=url)
+    XpathPraser(html_text, parser)
 
 def crawl(parser):
     if parser['type'] == 'xpath':
         for url in parser['urls']:
-            html_text = download(url=url)
+            t = td.Thread(target=threadTask, args=(parser, url))
+            t.setDaemon(True)
+            t.start()
+            t.join()
 
-            XpathPraser(html_text, parser)
 
-
+from multiprocessing import Process
 
 def startCrawl():
-    spawns = []
     for p in parserList:
-        spawns.append(gevent.spawn(crawl, p))
-        if len(spawns) >= MAX_DOWNLOAD_CONCURRENT:
-            gevent.joinall(spawns)
-            spawns = []
-    gevent.joinall(spawns)
-    gevent.sleep(1)
+        process = Process(target=crawl, args=(p,))
+        process.start()
+        process.join()
 
 
 
